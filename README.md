@@ -1,6 +1,7 @@
 # Cyan
 
 A melody generator powered by DL.
+
 Phase 1:
 Input a certian chord randomly, output a short melody that corresponds to that chord.
 
