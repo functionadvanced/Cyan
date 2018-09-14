@@ -1,15 +1,15 @@
-### Cyan
+# Cyan
 
 A melody generator powered by DL.
 
 ## Steps towards TALL RICH HANDSOME
-# Phase 1:
+### Phase 1:
 Input a certian chord randomly, output a short melody that corresponds to that chord.
 
-# Phase 2:
+### Phase 2:
 Learn hoe to produce a music-like sequences of chords.
 
-# Phase 3:
+### Phase 3:
 Learn the variations of chords and add features in Phase 1 and 2 to generate an entire music.
 
 
