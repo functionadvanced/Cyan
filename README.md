@@ -19,6 +19,6 @@ Latent variables can be constructed as different chords.
 Outputs: short melodys
 
 ## Problems:
-1. Get HIDI files and turns them into our data sets.
+1. Get MIDI files and turns them into our data sets.
 2. Definition of variation of chords.
 3. 
