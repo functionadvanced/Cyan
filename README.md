@@ -18,7 +18,7 @@ Outputs: short melodys
 
 ## What has been done:
 ### [CreateDataSet.py](https://github.com/functionadvanced/Cyan/blob/master/CreateDataSet.py)
-1. Use the python library [mido](https://mido.readthedocs.io/en/latest/index.html) to read and phrase midi file.
+1. Use the python library [mido](https://mido.readthedocs.io/en/latest/index.html) to read, phrase, and create midi file.
 2. Use the python library [pygame.mixer.music](https://www.pygame.org/docs/ref/music.html) to play the midi file.
 ### [beethoven_opus10_1_format0.mid](https://github.com/functionadvanced/Cyan/blob/master/beethoven_opus10_1_format0.mid)
-Sample midi file.
+Sample midi file. (Downloaded from the Internet. If there is any copyright infringement, please contact us for deletion. Email: jupeizhong6@gmail.com)
