@@ -12,6 +12,13 @@ Datasets: Melody segments that has labels as their corresponding chords.
 Latent variables can be constructed as different chords.
 Outputs: short melodys
 
+### Neural network structures
+1. Bidirectional LSTM layer for each melody segments. \(\overrightarrow{h_T}\) and \(\overleftarrow{h_T}\), then the two vectors are concatenated to from the vector \(h_t\).
+2. The vector than go through two linear layer which output mean \(\mu\) and log of variance \(\log\sigma^2\)
+3. Create a sample using the std and mean of from the previous layer \(s = \mu + \sigma*\epsilon, \epsilon\sim N(0,1)\)
+4. The sample then become the input of two linear layer that becames the vector \(h_o\)
+5. The final layer is a single layer of LSTM that finally generates the melogy.
+
 ## Problems:
 1. Get MIDI files and turns them into our data sets.
 2. Definition of variation of chords.
