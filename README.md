@@ -8,6 +8,9 @@ A melody generator powered by DL.
 2. Learn hoe to produce a music-like sequences of chords.
 3. Learn the variations of chords and add features in Phase 1 and 2 to generate an entire music.
 
+## Team members
+Peizhong Ju (functionadvanced), Ziyu Gong (BillyGong)
+
 ## Variantional autoencoder
 Datasets: Melody segments that has labels as their corresponding chords.
 Latent variables can be constructed as different chords.
