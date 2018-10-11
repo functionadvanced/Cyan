@@ -1,6 +1,5 @@
 # Cyan
 A melody generator powered by DL.
-
 <img src="https://github.com/functionadvanced/Cyan/blob/master/piano.jpg?raw=true" alt="drawing" width="100%"/>
 
 ## Objectives
@@ -11,19 +10,21 @@ A melody generator powered by DL.
 ## Team members
 Peizhong Ju (functionadvanced), Ziyu Gong (BillyGong)
 
-## Variantional autoencoder
-Datasets: Melody segments that has labels as their corresponding chords.
-Latent variables can be constructed as different chords.
-Outputs: short melodys
+## Neural Network Structures
+1. Bidirectional LSTM layer for each melody segments. <img src="https://latex.codecogs.com/gif.latex?\overrightarrow{h_T}" title="\overrightarrow{h_T}" /> and <img src="https://latex.codecogs.com/gif.latex?\overleftarrow{h_T}" title="\overleftarrow{h_T}" />, then the two vectors are concatenated to from the vector <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" />.
+2. The resulting <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" /> vectors are then feed into a VAE model which represets the <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" /> vector in latent space and then generate a new sample <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" /> vector.
+3. The final layer is a single layer of LSTM that took the newly generated <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" /> vector and generates the melogy.
 
-### Neural network structures
-1. Bidirectional LSTM layer for each melody segments. \(\overrightarrow{h_T}\) and \(\overleftarrow{h_T}\), then the two vectors are concatenated to from the vector \(h_t\).
-2. The vector than go through two linear layer which output mean \(\mu\) and log of variance \(\log\sigma^2\)
-3. Create a sample using the std and mean of from the previous layer \(s = \mu + \sigma*\epsilon, \epsilon\sim N(0,1)\)
-4. The sample then become the input of two linear layer that becames the vector \(h_o\)
-5. The final layer is a single layer of LSTM that finally generates the melogy.
+### LSTM models (GRU units)
+1. Input are short melody segments that corresponds to a simple chord (C#, B, etc.)
+2. The output of the LSTM are treated as an independent 
+3. Might use GRU units in terms of the faster convergence rate and easier implementation (guess)
 
-## Problems:
+### VAE models
+1. The <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" /> vector then goes through two linear layer which output mean <img src="https://latex.codecogs.com/gif.latex?\mu" title="\mu" /> and log of variance <img src="https://latex.codecogs.com/gif.latex?\log\sigma^2" title="\log\sigma^2" />
+2. Create a sample using the std and mean of from the previous layer <img src="https://latex.codecogs.com/gif.latex?s&space;=&space;\mu&space;&plus;&space;\sigma*\epsilon,\&space;\epsilon\sim&space;N(0,1)" title="s = \mu + \sigma*\epsilon,\ \epsilon\sim N(0,1)" /> to create the new <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" /> vector
+
+## Problems/Challenges:
 1. Get MIDI files and turns them into our data sets.
 2. Definition of variation of chords.
 
