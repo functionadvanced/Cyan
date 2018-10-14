@@ -11,7 +11,9 @@ logFileName = 'log.txt'
 
 mid = mido.MidiFile(currentPath + midiFileName)
 sys.stdout = open(currentPath + logFileName, 'w+', encoding='utf8')
-
+'''
+To see all meta message types: https://www.recordingblogs.com/wiki/midi-meta-messages
+'''
 for msg in mid:
     print(msg) # print each entry of this midi file
 
