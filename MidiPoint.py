@@ -1,7 +1,4 @@
-import pygame
 import mido
-import sys
-import random
 import os
 
 class Point:
@@ -47,10 +44,11 @@ class PointList:
         filePath = os.path.join(dir_path, 'midi_files', newMidiname)
         mid.save(filePath) # save as midi file
         if play:
+            import pygame
             pygame.init()
             pygame.mixer.music.load(filePath)
             pygame.mixer.music.play()
             input("press to exit")
     
-pl = PointList('1-l.mid', '1-r.mid')
-pl.saveAsMidi('temp.mid', play=True)
+# pl = PointList('1-l.mid', '1-r.mid')
+# pl.saveAsMidi('temp.mid', play=True)
