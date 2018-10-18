@@ -8,9 +8,15 @@ class SplitNet(torch.nn.Module):
         self.model = torch.nn.Sequential(
             torch.nn.Linear(num_notes*3,  1<<num_notes),
             torch.nn.ReLU(inplace=True),
-            torch.nn.Linear(1<<num_notes, 1<<num_notes),
+            torch.nn.Linear(1<<num_notes, (1<<num_notes) * 2),
             torch.nn.ReLU(inplace=True),
-            torch.nn.Linear(1<<num_notes, 1<<num_notes),
+            torch.nn.Linear((1<<num_notes) * 2, (1<<num_notes) * 3),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Linear((1<<num_notes) * 3, (1<<num_notes) * 4),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Linear((1<<num_notes) * 4, (1<<num_notes) * 2),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Linear((1<<num_notes) * 2, 1<<num_notes),
             torch.nn.ReLU(inplace=True),
         )
     def forward(self, x):
@@ -55,18 +61,45 @@ def  countSetBits(n):
         n >>= 1
     return count 
 
-myNet = SplitNet()
-val_dataset = DataSet()
+num_notes = 7 # train this number of notes together
 
-# validate
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=True)
-wrong_num = 0
-total_num = 0
-for _, (v_data, v_label) in enumerate(val_loader):
-    re = myNet.forward(v_data[0])
-    a = int(re.argmax(0))
-    b = int(v_label[0].argmax(0))
-    n = a ^ b
-    wrong_num += countSetBits(n)
-    total_num += 6
-print("validation accuracy: {0:.2f}%".format(wrong_num / total_num * 100))
+myNet = SplitNet(num_notes = num_notes)
+val_dataset = DataSet(num_notes=num_notes)
+train_dataset = DataSet(num_notes=num_notes,isTrain=True)
+lossFunc = torch.nn.MSELoss()
+optimizer = torch.optim.SGD(myNet.parameters(), lr=0.001)
+
+for epoch in range(10000):
+    # validate
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=True)
+    wrong_num = 0
+    total_num = 0
+    for _, (v_data, v_label) in enumerate(val_loader):
+        re = myNet.forward(v_data[0])
+        a = int(re.argmax(0))
+        b = int(v_label[0].argmax(0))
+        n = a ^ b
+        wrong_num += countSetBits(n)
+        total_num += num_notes
+    val_loss = wrong_num / total_num
+    # train
+    train_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=True)
+    wrong_num = 0
+    total_num = 0
+    for _, (t_data, t_label) in enumerate(train_loader):
+        re = myNet.forward(t_data[0])
+        a = int(re.argmax(0))
+        b = int(t_label[0].argmax(0))
+        n = a ^ b
+        wrong_num += countSetBits(n)
+        total_num += num_notes    
+        loss = lossFunc(re, t_label[0])
+        myNet.zero_grad()
+        loss.backward()
+        optimizer.step()
+    train_loss = wrong_num / total_num
+    if epoch % 100 == 1:
+        print("Epoch {}".format(epoch))
+        print("validation loss: {0:.2f}%".format(val_loss * 100))
+        print("training loss: {0:.2f}%".format(train_loss * 100))
+
