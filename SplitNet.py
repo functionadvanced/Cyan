@@ -66,7 +66,7 @@ num_notes = 7 # train this number of notes together
 myNet = SplitNet(num_notes = num_notes)
 val_dataset = DataSet(num_notes=num_notes)
 train_dataset = DataSet(num_notes=num_notes,isTrain=True)
-lossFunc = torch.nn.MSELoss()
+lossFunc = torch.nn.MSELoss(reduction='sum')
 optimizer = torch.optim.SGD(myNet.parameters(), lr=0.001)
 
 for epoch in range(10000):
@@ -100,6 +100,5 @@ for epoch in range(10000):
     train_loss = wrong_num / total_num
     if epoch % 100 == 1:
         print("Epoch {}".format(epoch))
-        print("validation loss: {0:.2f}%".format(val_loss * 100))
-        print("training loss: {0:.2f}%".format(train_loss * 100))
-
+        print("validation loss: {0:.4f}%".format(val_loss * 100))
+        print("training loss: {0:.4f}%".format(train_loss * 100))
