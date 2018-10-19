@@ -6,15 +6,15 @@ class SplitNet(torch.nn.Module):
     def __init__(self, num_notes=6):
         super(SplitNet, self).__init__()
         self.model = torch.nn.Sequential(
-            torch.nn.Linear(num_notes*3,  1<<num_notes),
+            torch.nn.Linear(num_notes*3,  60),
             torch.nn.ReLU(inplace=True),
-            torch.nn.Linear(1<<num_notes, (1<<num_notes) * 2),
+            torch.nn.Linear(60,  120),
             torch.nn.ReLU(inplace=True),
-            torch.nn.Linear((1<<num_notes) * 2, (1<<num_notes) * 3),
+            torch.nn.Linear(120,  60),
             torch.nn.ReLU(inplace=True),
-            torch.nn.Linear((1<<num_notes) * 3, (1<<num_notes) * 2),
+            torch.nn.Linear(60,  30),
             torch.nn.ReLU(inplace=True),
-            torch.nn.Linear((1<<num_notes) * 2, 1<<num_notes),
+            torch.nn.Linear(30,  2),
             torch.nn.ReLU(inplace=True),
         )
     def forward(self, x):
@@ -37,31 +37,22 @@ class DataSet(torch.utils.data.Dataset):
         offset = 0
         if not self.isTrain:
             offset = int(len(self.pointList) * 0.8)
-        result = torch.zeros(self.num_notes*3)        
-        corr_index = 0
+        result = torch.zeros(self.num_notes*3)   
         time_offset = self.pointList[offset+idx].time
         for i in range(self.num_notes):
-            result[i*3]   = self.pointList[offset+idx+i].note
-            result[i*3+1] = self.pointList[offset+idx+i].velocity
-            result[i*3+2] = self.pointList[offset+idx+i].time - time_offset
-            corr_index << 1
-            if self.pointList[offset+idx+i].isLeft:                    
-                corr_index += 1
-        label = torch.zeros(1<<self.num_notes)
-        label[corr_index] = 1
+            temp = offset+idx+i
+            result[i*3]   = self.pointList[temp].note
+            result[i*3+1] = self.pointList[temp].velocity
+            result[i*3+2] = self.pointList[temp].time - time_offset
+        label = torch.zeros(2)
+        target_pos = offset+idx+int(self.num_notes/2)
+        if self.pointList[target_pos].isLeft:
+            label[1] = 1
+        else:
+            label[0] = 1
         return (result, label)
 
-
-# Function to get no of set bits in binary 
-# representation of positive integer n */ 
-def  countSetBits(n): 
-    count = 0
-    while (n): 
-        count += n & 1
-        n >>= 1
-    return count 
-
-num_notes = 7 # train this number of notes together
+num_notes = 6 # train this number of notes together
 
 myNet = SplitNet(num_notes = num_notes)
 val_dataset = DataSet(num_notes=num_notes)
@@ -78,25 +69,25 @@ for epoch in range(10000):
         re = myNet.forward(v_data[0])
         a = int(re.argmax(0))
         b = int(v_label[0].argmax(0))
-        n = a ^ b
-        wrong_num += countSetBits(n)
-        total_num += num_notes
+        if a != b:
+            wrong_num += 1
+        total_num += 1
     val_loss = wrong_num / total_num
     # train
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=1, shuffle=True)
     wrong_num = 0
     total_num = 0
     for _, (t_data, t_label) in enumerate(train_loader):
-        re = myNet.forward(t_data[0])           
+        re = myNet.forward(t_data[0])
         loss = lossFunc(re, t_label[0])
         myNet.zero_grad()
         loss.backward()
         optimizer.step()
         a = int(re.argmax(0))
         b = int(t_label[0].argmax(0))
-        n = a ^ b
-        wrong_num += countSetBits(n)
-        total_num += num_notes 
+        if a != b:
+            wrong_num += 1
+        total_num += 1    
     train_loss = wrong_num / total_num
     if epoch % 1 == 0:
         print("Epoch {}".format(epoch))
