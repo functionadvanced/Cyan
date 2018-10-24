@@ -6,7 +6,7 @@ class SplitNet(torch.nn.Module):
     def __init__(self, num_notes=6):
         super(SplitNet, self).__init__()
         self.model = torch.nn.Sequential(
-            torch.nn.Linear(num_notes*3,  60),
+            torch.nn.Linear(num_notes,  60),
             torch.nn.ReLU(inplace=True),
             torch.nn.Linear(60,  120),
             torch.nn.ReLU(inplace=True),
@@ -28,6 +28,8 @@ class DataSet(torch.utils.data.Dataset):
         self.pointList = MidiPoint.PointList('1-l.mid', '1-r.mid').list
         self.pointList.extend(MidiPoint.PointList('2-l.mid', '2-r.mid').list)
         self.pointList.extend(MidiPoint.PointList('3-l.mid', '3-r.mid').list)
+        self.pointList.extend(MidiPoint.PointList('4-l.mid', '4-r.mid').list)
+        self.pointList.extend(MidiPoint.PointList('5-l.mid', '5-r.mid').list)
     def __len__(self):
         if self.isTrain:
             return int(len(self.pointList) * 0.8)-self.num_notes
@@ -37,13 +39,10 @@ class DataSet(torch.utils.data.Dataset):
         offset = 0
         if not self.isTrain:
             offset = int(len(self.pointList) * 0.8)
-        result = torch.zeros(self.num_notes*3)   
-        time_offset = self.pointList[offset+idx].time
+        result = torch.zeros(self.num_notes)
         for i in range(self.num_notes):
             temp = offset+idx+i
-            result[i*3]   = self.pointList[temp].note
-            result[i*3+1] = self.pointList[temp].velocity
-            result[i*3+2] = self.pointList[temp].time - time_offset
+            result[i]   = self.pointList[temp].note
         label = torch.zeros(2)
         target_pos = offset+idx+int(self.num_notes/2)
         if self.pointList[target_pos].isLeft:
