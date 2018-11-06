@@ -14,10 +14,11 @@ class Point:
         return "note="+str(self.note)+" velocity="+str(self.velocity)+" time="+str(self.time)+" "+temp
 
 class PointList:
-    def __init__(self, l_file_name, r_file_name):
+    def __init__(self, l_file_name, r_file_name=None):
         self.list = []
         self.add(l_file_name, True)
-        self.add(r_file_name, False)
+        if r_file_name != None:
+            self.add(r_file_name, False)
         self.list.sort(key=lambda x: x.time)
     def add(self, file_name, isLeft):
         dir_path = os.path.dirname(os.path.realpath(__file__))
