@@ -1,6 +1,7 @@
 import MidiPoint
 import torch
 import torch.utils.data
+import os
 
 class SplitNet(torch.nn.Module):
     def __init__(self, num_notes=6):
@@ -59,6 +60,16 @@ train_dataset = DataSet(num_notes=num_notes,isTrain=True)
 lossFunc = torch.nn.MSELoss(reduction='sum')
 optimizer = torch.optim.SGD(myNet.parameters(), lr=0.0005)
 
+best_accuracy = 0
+dir_path = os.path.dirname(os.path.realpath(__file__))
+savedModel_name = "SplitModel.model"
+model_path = os.path.join(dir_path, savedModel_name)
+if os.path.isfile(model_path):
+    savedModel = torch.load(model_path)
+    if savedModel['num_notes'] == num_notes:
+        myNet.load_state_dict(savedModel['state_dict'])
+        best_accuracy = savedModel['accuracy']
+
 for epoch in range(10000):
     # validate
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=True)
@@ -92,3 +103,15 @@ for epoch in range(10000):
         print("Epoch {}".format(epoch))
         print("validation loss: {0:.4f}%".format(val_loss * 100))
         print("training loss: {0:.4f}%".format(train_loss * 100))
+
+    accuracy = 1 - val_loss
+    if accuracy > best_accuracy:
+        torch.save(
+            {
+                'accuracy': 1-val_loss,
+                'state_dict': myNet.state_dict(),
+                'num_notes': num_notes,
+            }, model_path
+        )
+        best_accuracy = accuracy
+        print("save model")
