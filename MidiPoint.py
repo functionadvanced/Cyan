@@ -31,13 +31,24 @@ class PointList:
                 if msg.type == 'note_on':
                     self.list.append(Point(msg.note, msg.velocity, current_time, isLeft))
 
-    def saveAsMidi(self, newMidiname, play=False):
+    def saveAsMidi(self, newMidiname, play=False, mode=0):
+        '''
+        mode=0: play both hands
+        mode=1: play left hand
+        mode=2: play right hand
+        '''
         mid = mido.MidiFile()
         track = mido.MidiTrack()
         mid.tracks.append(track)
         track.append(mido.Message('program_change', program=0, time=0))
         lastTime = 0
         for m in self.list:
+            if m.isLeft:
+                if mode == 2:
+                    continue
+            else:
+                if mode == 1:
+                    continue
             # one second is 960 ticks
             track.append(mido.Message('note_on', note=m.note, velocity=m.velocity, time=int((m.time-lastTime)*960)))
             lastTime = m.time

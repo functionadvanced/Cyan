@@ -40,9 +40,19 @@ class SplitNet(torch.nn.Module):
         return a
 
     def Split(self, midi_name):
+        # do something to split the midi file
         plist = MidiPoint.PointList(midi_name)
-        print(len(plist.list))
-        # do something to split the midi file...
+        total_len = len(plist.list)
+        for i in range(total_len):
+            begin_pos = i - int(self.num_notes/2)
+            segment = []
+            for j in range(self.num_notes):
+                t_pos = i - int(self.num_notes) + j
+                segment.append(plist.list[t_pos].note)
+            segment = torch.tensor(segment, dtype=torch.float)
+            plist.list[i].isLeft = self.forward(segment).argmax()
+        # plist.saveAsMidi('temp.mid', play=True, mode=2) # play right hand
+        
 
     def loadModel(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
