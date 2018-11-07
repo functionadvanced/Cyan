@@ -1,6 +1,7 @@
-# Cyan
-A melody generator powered by DL.
-<img src="https://github.com/functionadvanced/Cyan/blob/master/piano.jpg?raw=true" alt="drawing" width="100%"/>
+# Cyan: A Melody Generator Powered by Deep Learning
+
+<img src="https://github.com/functionadvanced/Cyan/blob/master/piano.jpg?raw=true" alt="drawing" width="100%" height="300px"/>
+
 
 ## Objectives
 1. Input a certian chord randomly, output a short melody that corresponds to that chord.
