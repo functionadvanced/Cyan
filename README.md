@@ -2,6 +2,8 @@
 
 <img src="https://github.com/functionadvanced/Cyan/blob/master/piano.jpg?raw=true" alt="drawing" width="100%" height="300px"/>
 
+## Notice
+This is our final project for the course BME 595 of Purdue University. We are still working on it now. We plan to finished it before 2019.
 
 ## Objectives
 1. Input a certian chord randomly, output a short melody that corresponds to that chord.
