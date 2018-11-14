@@ -2,16 +2,17 @@ import mido
 import os
 
 class Point:
-    def __init__(self, note, velocity, time, isLeft):
+    def __init__(self, note, velocity, time, isLeft, delta_time = 0):
         self.note = note
         self.velocity = velocity
         self.time = time
+        self.delta_time = delta_time
         self.isLeft = isLeft    
     def __str__(self):
         temp = 'left'
         if not self.isLeft:
             temp = 'right'
-        return "note="+str(self.note)+" velocity="+str(self.velocity)+" time="+str(self.time)+" "+temp
+        return "note="+str(self.note)+" velocity="+str(self.velocity)+" time="+str(self.time)+" delta_time="+str(self.delta_time)+" "+temp
 
 class PointList:
     def __init__(self, l_file_name, r_file_name=None):
@@ -29,7 +30,7 @@ class PointList:
             if msg.time != 0 or msg.type == 'note_on':
                 current_time += msg.time
                 if msg.type == 'note_on':
-                    self.list.append(Point(msg.note, msg.velocity, current_time, isLeft))
+                    self.list.append(Point(msg.note, msg.velocity, current_time, isLeft, msg.time))
 
     def saveAsMidi(self, newMidiname, play=False, mode=0):
         '''
@@ -41,7 +42,7 @@ class PointList:
         track = mido.MidiTrack()
         mid.tracks.append(track)
         track.append(mido.Message('program_change', program=0, time=0))
-        lastTime = 0
+        
         for m in self.list:
             if m.isLeft:
                 if mode == 2:
@@ -50,8 +51,8 @@ class PointList:
                 if mode == 1:
                     continue
             # one second is 960 ticks
-            track.append(mido.Message('note_on', note=m.note, velocity=m.velocity, time=int((m.time-lastTime)*960)))
-            lastTime = m.time
+            track.append(mido.Message('note_on', note=m.note, velocity=m.velocity, time=int(m.delta_time*960)))
+            
         dir_path = os.path.dirname(os.path.realpath(__file__))
         filePath = os.path.join(dir_path, 'midi_files', newMidiname)
         mid.save(filePath) # save as midi file
