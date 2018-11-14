@@ -47,11 +47,13 @@ class SplitNet(torch.nn.Module):
             begin_pos = i - int(self.num_notes/2)
             segment = []
             for j in range(self.num_notes):
-                t_pos = i - int(self.num_notes) + j
+                t_pos = begin_pos + j
+                if t_pos >= total_len:
+                    t_pos -= total_len
                 segment.append(plist.list[t_pos].note)
             segment = torch.tensor(segment, dtype=torch.float)
             plist.list[i].isLeft = self.forward(segment).argmax()
-        # plist.saveAsMidi('temp.mid', play=True, mode=2) # play right hand
+        plist.saveAsMidi('temp.mid', play=True, mode=2) # play right hand
         
 
     def loadModel(self):
@@ -159,4 +161,4 @@ class DataSet(torch.utils.data.Dataset):
 
 myNet = SplitNet(num_notes=6)
 # myNet.train()
-myNet.Split('beethoven_opus10_1_format0.mid')
+myNet.Split('3-whole.mid')
