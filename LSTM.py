@@ -93,7 +93,7 @@ optimizer = torch.optim.SGD(myLstm.parameters(), lr=0.001)
 data = torch.tensor(train_dataset.result)
 target = torch.tensor(train_dataset.label)
 
-for epoch in range(2000):
+for epoch in range(10000):
     myLstm.zero_grad()
     myLstm.hidden = myLstm.init_hidden()
     predict = myLstm(data)
