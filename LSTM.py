@@ -23,16 +23,40 @@ class LSTMpredictor(torch.nn.Module):
         note_scores = torch.nn.functional.log_softmax(note_space, dim=1)
         return note_space
 
+    def loadModel(self):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        savedModel_name = "LSTM.model"
+        model_path = os.path.join(dir_path, savedModel_name)
+        if os.path.isfile(model_path):
+            savedModel = torch.load(model_path)
+            self.load_state_dict(savedModel['state_dict'])
+            min_loss = savedModel['MSEloss'] * savedModel['total_len'] / TOTAL_LEN
+            self.min_note = savedModel['min_note']
+
+    def predictFromOne(self):
+        all_re = []
+        re = torch.tensor([[70.0, 0.1425]])
+        self.loadModel()
+        self.hidden = myLstm.init_hidden()
+        with torch.no_grad():
+            for ii in range(TOTAL_LEN):                                
+                re = self.forward(re)
+                all_re.append(re.view(2).tolist())
+        all_re = torch.tensor(all_re)
+        all_re[:, 0] += self.min_note
+        all_re[:, 1] /= 3
+        print(all_re)
+        PlayResult(all_re)
+
     def train(self, train_dataset):                
         loss_func = torch.nn.MSELoss(reduction="sum")
         optimizer = torch.optim.SGD(myLstm.parameters(), lr=0.0001)
         data = torch.tensor(train_dataset.result)
         target = torch.tensor(train_dataset.label)
 
-
         min_loss = 1000000
-        loadModel()
-        for epoch in range(20000):
+        self.loadModel()
+        for epoch in range(1):
             self.zero_grad()
             self.hidden = myLstm.init_hidden()
             predict = myLstm(data)
@@ -41,12 +65,13 @@ class LSTMpredictor(torch.nn.Module):
             dir_path = os.path.dirname(os.path.realpath(__file__))
             savedModel_name = "LSTM.model"
             model_path = os.path.join(dir_path, savedModel_name)
-            if loss < min_loss and loss < 0.01:
+            if loss < min_loss and loss < 0.1:
                 torch.save(
                             {
                                 'MSEloss': loss / TOTAL_LEN,
                                 'state_dict': self.state_dict(),
                                 'total_len': TOTAL_LEN,
+                                'min_note': train_dataset.min_note,
                             }, model_path
                         )
                 min_loss = loss
@@ -59,7 +84,6 @@ class LSTMpredictor(torch.nn.Module):
             self.hidden = self.init_hidden()    
             re = train_dataset.recover(self.forward(data))
             print(re)
-            # PlayResult(train_dataset.recover(target))
             PlayResult(re)
 
 
@@ -121,16 +145,6 @@ class DataSet(torch.utils.data.Dataset):
     def __getitem__(self, idx):       
         return (self.result, self.label)
 
-def loadModel():
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    savedModel_name = "LSTM.model"
-    model_path = os.path.join(dir_path, savedModel_name)
-    if os.path.isfile(model_path):
-        savedModel = torch.load(model_path)
-        myLstm.load_state_dict(savedModel['state_dict'])
-        min_loss = savedModel['MSEloss'] * savedModel['total_len'] / TOTAL_LEN
-
-
 def PlayResult(re):
     pl = []
     for i in re:
@@ -141,48 +155,5 @@ def PlayResult(re):
 
 train_dataset = DataSet(2,isTrain=True)
 myLstm = LSTMpredictor(64, len(train_dataset.result))
-myLstm.train(train_dataset)
-
-
-
-
-# train_dataset = DataSet(2,isTrain=True)
-# myLstm = LSTMpredictor(64, len(train_dataset.result))
-# loss_func = torch.nn.MSELoss(reduction="sum")
-# optimizer = torch.optim.SGD(myLstm.parameters(), lr=0.0001)
-# data = torch.tensor(train_dataset.result)
-# target = torch.tensor(train_dataset.label)
-
-
-# min_loss = 1000000
-# loadModel()
-# for epoch in range(20000):
-#     myLstm.zero_grad()
-#     myLstm.hidden = myLstm.init_hidden()
-#     predict = myLstm(data)
-#     loss = loss_func(predict, target)
-#     print(loss)
-#     dir_path = os.path.dirname(os.path.realpath(__file__))
-#     savedModel_name = "LSTM.model"
-#     model_path = os.path.join(dir_path, savedModel_name)
-#     if loss < min_loss and loss < 1:
-#         torch.save(
-#                     {
-#                         'MSEloss': loss / TOTAL_LEN,
-#                         'state_dict': myLstm.state_dict(),
-#                         'total_len': TOTAL_LEN,
-#                     }, model_path
-#                 )
-#         min_loss = loss
-#         print('save model')
-#         break
-#     loss.backward(retain_graph=True)
-#     optimizer.step()
-
-# with torch.no_grad():
-#     myLstm.hidden = myLstm.init_hidden()    
-#     re = train_dataset.recover(myLstm(data))
-#     print(re)
-#     # PlayResult(train_dataset.recover(target))
-#     PlayResult(re)
-
+# myLstm.train(train_dataset)
+myLstm.predictFromOne()
