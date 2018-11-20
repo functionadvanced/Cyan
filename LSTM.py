@@ -1,6 +1,7 @@
 import torch
 import torch.utils.data
 import MidiPoint
+import os
 
 torch.manual_seed(1)
 
@@ -21,6 +22,48 @@ class LSTMpredictor(torch.nn.Module):
         note_space = self.hidden2note(lstm_out.view(len(note_seq), -1))
         note_scores = torch.nn.functional.log_softmax(note_space, dim=1)
         return note_space
+
+    def train(self, train_dataset):                
+        loss_func = torch.nn.MSELoss(reduction="sum")
+        optimizer = torch.optim.SGD(myLstm.parameters(), lr=0.0001)
+        data = torch.tensor(train_dataset.result)
+        target = torch.tensor(train_dataset.label)
+
+
+        min_loss = 1000000
+        loadModel()
+        for epoch in range(20000):
+            self.zero_grad()
+            self.hidden = myLstm.init_hidden()
+            predict = myLstm(data)
+            loss = loss_func(predict, target)
+            print(loss)
+            dir_path = os.path.dirname(os.path.realpath(__file__))
+            savedModel_name = "LSTM.model"
+            model_path = os.path.join(dir_path, savedModel_name)
+            if loss < min_loss and loss < 0.01:
+                torch.save(
+                            {
+                                'MSEloss': loss / TOTAL_LEN,
+                                'state_dict': self.state_dict(),
+                                'total_len': TOTAL_LEN,
+                            }, model_path
+                        )
+                min_loss = loss
+                print('save model')
+                break
+            loss.backward(retain_graph=True)
+            optimizer.step()
+
+        with torch.no_grad():
+            self.hidden = self.init_hidden()    
+            re = train_dataset.recover(self.forward(data))
+            print(re)
+            # PlayResult(train_dataset.recover(target))
+            PlayResult(re)
+
+
+TOTAL_LEN = 40
 
 class DataSet(torch.utils.data.Dataset):
     def normalize(self):
@@ -48,16 +91,17 @@ class DataSet(torch.utils.data.Dataset):
     def __init__(self, mode, isTrain=False):
         self.isTrain = isTrain
         if mode == 0: # both hands
-            self.pointList = MidiPoint.PointList('2-l.mid', '2-r.mid').list
+            self.pointList = MidiPoint.PointList('3-l.mid', '3-r.mid').list
         elif mode == 1: # left hand
-            self.pointList = MidiPoint.PointList('2-l.mid').list
+            self.pointList = MidiPoint.PointList('3-l.mid').list
         else:
-            self.pointList = MidiPoint.PointList('2-r.mid').list
+            self.pointList = MidiPoint.PointList('3-r.mid').list
 
         self.normalize()
 
         offset = 0
-        total_len = 40
+        total_len = TOTAL_LEN
+        # print(len(self.pointList))
         if not self.isTrain:
             offset = int(len(self.pointList) * 0.8)
             total_len = int(len(self.pointList) * 0.2) - 1
@@ -77,6 +121,15 @@ class DataSet(torch.utils.data.Dataset):
     def __getitem__(self, idx):       
         return (self.result, self.label)
 
+def loadModel():
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    savedModel_name = "LSTM.model"
+    model_path = os.path.join(dir_path, savedModel_name)
+    if os.path.isfile(model_path):
+        savedModel = torch.load(model_path)
+        myLstm.load_state_dict(savedModel['state_dict'])
+        min_loss = savedModel['MSEloss'] * savedModel['total_len'] / TOTAL_LEN
+
 
 def PlayResult(re):
     pl = []
@@ -88,26 +141,48 @@ def PlayResult(re):
 
 train_dataset = DataSet(2,isTrain=True)
 myLstm = LSTMpredictor(64, len(train_dataset.result))
-loss_func = torch.nn.MSELoss(reduction="sum")
-optimizer = torch.optim.SGD(myLstm.parameters(), lr=0.001)
-data = torch.tensor(train_dataset.result)
-target = torch.tensor(train_dataset.label)
+myLstm.train(train_dataset)
 
-for epoch in range(10000):
-    myLstm.zero_grad()
-    myLstm.hidden = myLstm.init_hidden()
-    predict = myLstm(data)
-    loss = loss_func(predict, target)
-    print(loss)
-    loss.backward(retain_graph=True)
-    optimizer.step()
-    # print(myLstm(data))
-with torch.no_grad():
-    # print(train_dataset.recover(target))
-    myLstm.hidden = myLstm.init_hidden()
-    
-    re = train_dataset.recover(myLstm(data))
-    print(re)
-    # PlayResult(train_dataset.recover(target))
-    PlayResult(re)
+
+
+
+# train_dataset = DataSet(2,isTrain=True)
+# myLstm = LSTMpredictor(64, len(train_dataset.result))
+# loss_func = torch.nn.MSELoss(reduction="sum")
+# optimizer = torch.optim.SGD(myLstm.parameters(), lr=0.0001)
+# data = torch.tensor(train_dataset.result)
+# target = torch.tensor(train_dataset.label)
+
+
+# min_loss = 1000000
+# loadModel()
+# for epoch in range(20000):
+#     myLstm.zero_grad()
+#     myLstm.hidden = myLstm.init_hidden()
+#     predict = myLstm(data)
+#     loss = loss_func(predict, target)
+#     print(loss)
+#     dir_path = os.path.dirname(os.path.realpath(__file__))
+#     savedModel_name = "LSTM.model"
+#     model_path = os.path.join(dir_path, savedModel_name)
+#     if loss < min_loss and loss < 1:
+#         torch.save(
+#                     {
+#                         'MSEloss': loss / TOTAL_LEN,
+#                         'state_dict': myLstm.state_dict(),
+#                         'total_len': TOTAL_LEN,
+#                     }, model_path
+#                 )
+#         min_loss = loss
+#         print('save model')
+#         break
+#     loss.backward(retain_graph=True)
+#     optimizer.step()
+
+# with torch.no_grad():
+#     myLstm.hidden = myLstm.init_hidden()    
+#     re = train_dataset.recover(myLstm(data))
+#     print(re)
+#     # PlayResult(train_dataset.recover(target))
+#     PlayResult(re)
 
