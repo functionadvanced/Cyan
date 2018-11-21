@@ -3,7 +3,7 @@ import torch.utils.data
 import MidiPoint
 import os
 
-torch.manual_seed(1)
+
 
 class LSTMpredictor(torch.nn.Module):
     def __init__(self, hidden_dim):
@@ -33,17 +33,21 @@ class LSTMpredictor(torch.nn.Module):
             self.min_loss = savedModel['MSEloss'] * savedModel['total_len'] / TOTAL_LEN
             self.min_note = savedModel['min_note']
 
-    def predictFromOne(self):
+    def predictFromOne(self, LEN, seed, start_note, start_time, start_hid1, start_hid2, min_time):
+        torch.manual_seed(seed)
         all_re = []
-        re = torch.tensor([[73.0, 0.05]])
+        re = torch.tensor([[start_note, start_time]])
         self.loadModel()
-        self.hidden = myLstm.init_hidden()
+        # self.hidden = myLstm.init_hidden()
+        self.hidden = (torch.rand(1, 1, self.hidden_dim) *start_hid1,
+                        torch.rand(1, 1, self.hidden_dim) * start_hid2)
         with torch.no_grad():
-            for ii in range(TOTAL_LEN):                                
+            for ii in range(LEN):                                
                 re = self.forward(re)
                 s_re = re.view(2).tolist()
-                s_re[1] = round(s_re[1]*1.5, 0) / 1.5
+                s_re[1] = round(s_re[1]/min_time, 0) * min_time
                 all_re.append(s_re)
+                re = torch.tensor([s_re])
         all_re = torch.tensor(all_re)
         all_re[:, 0] += self.min_note
         all_re[:, 1] /= 3
@@ -62,7 +66,7 @@ class LSTMpredictor(torch.nn.Module):
         savedModel_name = "LSTM.model"
         model_path = os.path.join(dir_path, savedModel_name)
 
-        for epoch in range(5000):
+        for epoch in range(50000):
             sum_loss = 0
             for songIdx in range(train_dataset.numSong):
                 self.zero_grad()
@@ -72,16 +76,13 @@ class LSTMpredictor(torch.nn.Module):
                 predict = myLstm(data)
                 loss = loss_func(predict, target)
                 sum_loss += loss
-                # print(loss)
-                
-                
                 loss.backward(retain_graph=True)
                 optimizer.step()
             avg_loss = sum_loss / train_dataset.numSong
             print(avg_loss)
             # save
             # if avg_loss < self.min_loss and avg_loss < 100:
-            if avg_loss < 0.3:
+            if avg_loss < 150:
                 torch.save(
                             {
                                 'MSEloss': avg_loss / TOTAL_LEN,
@@ -97,13 +98,17 @@ class LSTMpredictor(torch.nn.Module):
 
 
         with torch.no_grad():
-            self.hidden = self.init_hidden()    
+            self.hidden = self.init_hidden()
+            data = torch.tensor(train_dataset.allResults[0])
+            # target = torch.tensor(train_dataset.allLabels[0])
             re = train_dataset.recover(self.forward(data))
+            # print(target)
+            # re = train_dataset.recover(target)
             print(re)            
             PlayResult(re)
 
 
-TOTAL_LEN = 500
+TOTAL_LEN = 40
 
 class DataSet(torch.utils.data.Dataset):
     def normalize(self):
@@ -148,24 +153,20 @@ class DataSet(torch.utils.data.Dataset):
             
             self.allLists.append(pointList)
         self.normalize()
-        for ii in range(self.numSong):
+        for j in range(self.numSong):
             offset = 0
             total_len = TOTAL_LEN
             if not self.isTrain:
-                offset = int(len(pointList) * 0.8)
-                total_len = int(len(pointList) * 0.2) - 1
+                offset = int(len(self.allLists[j]) * 0.8)
+                total_len = int(len(self.allLists[j]) * 0.2) - 1
             result = []
             label = []
             for i in range(total_len):
                 temp = offset+i
-                result.append([pointList[temp].note, pointList[temp].delta_time])
-                label.append([pointList[temp+1].note, pointList[temp+1].delta_time])
+                result.append([self.allLists[j][temp].note, self.allLists[j][temp].delta_time])
+                label.append([self.allLists[j][temp+1].note, self.allLists[j][temp+1].delta_time])
             self.allResults.append(result)
             self.allLabels.append(label)
-
-        
-
-
     def __len__(self):
         return self.numSong
     def __getitem__(self, idx):       
@@ -182,4 +183,4 @@ def PlayResult(re):
 train_dataset = DataSet(2,numSong=18,isTrain=True)
 myLstm = LSTMpredictor(64)
 # myLstm.train(train_dataset)
-myLstm.predictFromOne()
+myLstm.predictFromOne(seed=20,LEN=40,start_note=70,start_time=0.1,start_hid1=30,start_hid2=30,min_time=0.5)
