@@ -31,8 +31,8 @@ for i, _ in enumerate(note_list):
 track.append(mido.Message('note_off', note=0, velocity=127, time=630))
 for i in range(20):
     track.append(mido.Message('note_on', note=random.randint(50, 80), velocity=127, time=330))
-    track.append(mido.Message('note_on', note=random.randint(20, 50), velocity=127, time=0))
-    track.append(mido.Message('note_on', note=random.randint(80, 108), velocity=127, time=0))
+    # track.append(mido.Message('note_on', note=random.randint(20, 50), velocity=127, time=0))
+    # track.append(mido.Message('note_on', note=random.randint(80, 108), velocity=127, time=0))
 track.append(mido.Message('note_off', note=0, velocity=127, time=630))
 mid.save(currentPath + newMidiName) # save as midi file
 

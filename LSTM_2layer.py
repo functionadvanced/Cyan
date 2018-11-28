@@ -184,4 +184,4 @@ def PlayResult(re):
 train_dataset = DataSet(2,numSong=18,isTrain=True)
 myLstm = LSTMpredictor(128)
 # myLstm.train(train_dataset)
-myLstm.predictFromOne(seed=2,LEN=20,start_note=2,start_time=0.1,start_hid1=1,start_hid2=0,min_time=0.02)
+myLstm.predictFromOne(seed=1,LEN=40,start_note=2,start_time=0.1,start_hid1=1,start_hid2=1,min_time=0.5)

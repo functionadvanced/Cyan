@@ -201,4 +201,4 @@ def recover(aim): # aim should be a n*2 tensor
 train_dataset = DataSet(2,numSong=18,isTrain=True)
 myLstm = LSTMpredictor(64)
 # myLstm.train(train_dataset)
-myLstm.predictFromOne(seed=9,LEN=100,start_note=0,start_time=0.1,start_hid1=0.1,start_hid2=0.1,min_time=0.5)
+myLstm.predictFromOne(seed=2,LEN=100,start_note=0,start_time=0.1,start_hid1=0.1,start_hid2=0.1,min_time=0.5)
