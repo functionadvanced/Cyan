@@ -39,10 +39,66 @@ def LoadAllNotes():
 current_channel = 0
 def PlayNote(note):
     global current_channel
+    global key_status
+    key_status[note-36] = True
     pygame.mixer.Channel(current_channel).play(notes_list[note-36])
     current_channel += 1
     if current_channel > 7:
         current_channel -= 8
+
+def ReleaseNote(note):
+    global key_status
+    key_status[note-36] = False
+
+def GetKeyIdx(i, isWhite=True):
+    a = int(i / 7)
+    b = i % 7
+    b *= 2
+    if b > 4:
+        b -= 1
+    key_idx = a*12+b
+    if not isWhite:
+        key_idx += 1
+    return key_idx
+
+def DrawNoteNum():
+    count = 2
+    idx = 0
+    for i in range(35):
+        key_idx = GetKeyIdx(i)
+        text_surface = basicfont.render(str(key_idx+36), True, pygame.Color(color_glacierBlue))
+        screen.blit(text_surface, (50+i*40+10,  160))
+
+    for i in range(35):
+        if idx == count:
+            count = 5 - count
+            idx = 0
+            continue
+        idx += 1
+        key_idx = GetKeyIdx(i, isWhite=False)
+        text_surface = basicfont.render(str(key_idx+36), True, pygame.Color(color_overcast))
+        screen.blit(text_surface, (50+i*40+29,  100))
+
+def DrawNote():
+    global key_status
+    count = 2
+    idx = 0
+    for i in range(35):
+        if not key_status[GetKeyIdx(i)]:
+            pygame.draw.rect(screen, pygame.Color(color_glacierBlue), [50+i*40, 10, 38, 200])
+        pygame.draw.rect(screen, pygame.Color(color_warmGray), [52+i*40, 12, 32, 194])
+        
+
+    for i in range(35):
+        if idx == count:
+            count = 5 - count
+            idx = 0
+            continue
+        idx += 1
+        if not key_status[GetKeyIdx(i, isWhite=False)]:
+            pygame.draw.rect(screen, pygame.Color(color_glacierBlue), [50+i*40+25, 10, 30, 125])
+        pygame.draw.rect(screen, BLACK, [50+i*40+22, 10, 28, 120])
+
 
 # Initialize the game engine
 pygame.mixer.init(frequency = 44100, size = -16, channels = 100, buffer = 2**12) 
@@ -67,14 +123,21 @@ color_ice = "#A1D6E6"
 color_glacierBlue = "#1995AD"
  
 # Set the height and width of the screen
-size = [1800, 500]
+size = [1500, 500]
 screen = pygame.display.set_mode(size)
+# DISPLAYSURF = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
  
 pygame.display.set_caption("Cyan")
+
+basicfont = pygame.font.SysFont(None, 20)
 
 #Loop until the user clicks the close button.
 done = False
 clock = pygame.time.Clock()
+
+key_status = []
+for i in range(60):
+    key_status.append(False)
 while not done:
  
     # This limits the while loop to a max of 10 times per second.
@@ -102,13 +165,27 @@ while not done:
             if event.key == pygame.K_k:
                 PlayNote(84)
             if event.key == pygame.K_l:
-                PlayNote(85)    
+                PlayNote(85)
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_a:
+                ReleaseNote(77)
+            if event.key == pygame.K_s:
+                ReleaseNote(78)
+            if event.key == pygame.K_d:
+                ReleaseNote(79)
+            if event.key == pygame.K_f:
+                ReleaseNote(80)
+            if event.key == pygame.K_g:
+                ReleaseNote(81)
+            if event.key == pygame.K_h:
+                ReleaseNote(82)
+            if event.key == pygame.K_j:
+                ReleaseNote(83)
+            if event.key == pygame.K_k:
+                ReleaseNote(84)
+            if event.key == pygame.K_l:
+                ReleaseNote(85)
 
-    # keys = pygame.key.get_pressed()
-    # if keys[pygame.K_a]:
-    #     PlayNote(44)
-    # if keys[pygame.K_s]:
-    #     PlayNote(45)
  
     # All drawing code happens after the for loop and but
     # inside the main while done==False loop.
@@ -116,23 +193,9 @@ while not done:
     # Clear the screen and set the screen background
     screen.fill(pygame.Color(color_overcast))
 
-    count = 2
-    idx = 0
-    for i in range(42):
-        pygame.draw.rect(screen, pygame.Color(color_glacierBlue), [50+i*40, 10, 38, 200])
-        pygame.draw.rect(screen, pygame.Color(color_warmGray), [52+i*40, 12, 32, 194])
-        
+    DrawNote()
 
-    for i in range(42):
-        if idx == count:
-            count = 5 - count
-            idx = 0
-            continue
-        idx += 1
-        pygame.draw.rect(screen, pygame.Color(color_glacierBlue), [50+i*40+25, 10, 30, 125])
-        pygame.draw.rect(screen, BLACK, [50+i*40+22, 10, 28, 120])
-
-    
+    DrawNoteNum()
     
     # Go ahead and update the screen with what we've drawn.
     # This MUST happen after all the other drawing commands.
