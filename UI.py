@@ -21,6 +21,8 @@ def CreateEachNote(note):
     model_path = os.path.join(dir_path, os.path.join(folder_name, savedModel_name))
 
     mid.save(model_path) # save as midi file
+    # use the following website to convert .mid file to .wav file
+    # https://www.conversion-tool.com/midi/ 
 
 
 notes_list = []
@@ -41,18 +43,11 @@ def PlayNote(note):
     current_channel += 1
     if current_channel > 7:
         current_channel -= 8
-    # notes_list[note-36].play()
 
 # Initialize the game engine
-# pygame.mixer.pre_init(44100, 16, 2, 4096)
 pygame.mixer.init(frequency = 44100, size = -16, channels = 100, buffer = 2**12) 
 pygame.init()
 LoadAllNotes()
-
-
-
-
-
 
 # note_list = [36, 37, 38, 39, 40, 41, 42, 43, 44, 45]
 # for note in note_list:
