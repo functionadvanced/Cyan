@@ -5,6 +5,63 @@ import sys
 import os
 import time
 
+def fill_gradient(surface, color, gradient, rect=None, vertical=True, forward=True):
+    """fill a surface with a gradient pattern
+    Parameters:
+    color -> starting color
+    gradient -> final color
+    rect -> area to fill; default is surface's rect
+    vertical -> True=vertical; False=horizontal
+    forward -> True=forward; False=reverse
+    
+    Pygame recipe: http://www.pygame.org/wiki/GradientCode
+    """
+    if rect is None: rect = surface.get_rect()
+    x1,x2 = rect.left, rect.right
+    y1,y2 = rect.top, rect.bottom
+    if vertical: h = y2-y1
+    else:        h = x2-x1
+    if forward: a, b = color, gradient
+    else:       b, a = color, gradient
+    rate = (
+        float(b[0]-a[0])/h,
+        float(b[1]-a[1])/h,
+        float(b[2]-a[2])/h
+    )
+    fn_line = pygame.draw.line
+    if vertical:
+        for line in range(y1,y2):
+            color = (
+                min(max(a[0]+(rate[0]*(line-y1)),0),255),
+                min(max(a[1]+(rate[1]*(line-y1)),0),255),
+                min(max(a[2]+(rate[2]*(line-y1)),0),255)
+            )
+            fn_line(surface, color, (x1,line), (x2,line))
+    else:
+        for col in range(x1,x2):
+            color = (
+                min(max(a[0]+(rate[0]*(col-x1)),0),255),
+                min(max(a[1]+(rate[1]*(col-x1)),0),255),
+                min(max(a[2]+(rate[2]*(col-x1)),0),255)
+            )
+            fn_line(surface, color, (col,y1), (col,y2))
+
+all_flying_notes = []
+class flyingNote:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.v = 2
+        self.dx = 20
+        self.dy = 20
+    def update(self, surface):
+        self.y -= self.v
+        pygame.draw.ellipse(surface, pygame.Color(color_glacierBlue)
+            , [self.x, self.y, self.dx, self.dy], 1) 
+    def __del__(self):
+        pass
+        # print("del")
+
 
 def CreateEachNote(note):
     # construct new midi
@@ -33,15 +90,25 @@ def LoadAllNotes():
         model_path = os.path.join(dir_path, os.path.join(folder_name, savedModel_name))
         notes_list.append(pygame.mixer.Sound(model_path))
         
+a = flyingNote(100, 100)
 current_channel = 0
 def PlayNote(note):
     global current_channel
-    global key_status
+    global key_statusa
     key_status[note-36] = True
     pygame.mixer.Channel(current_channel).play(notes_list[note-36])
     current_channel += 1
     if current_channel > 7:
         current_channel -= 8
+    # generate flying note
+
+    aim = note-36
+    t1 = int(aim / 12)
+    t2 = aim % 12
+    delta = [0, 20, 40, 60, 80, 120, 140, 160, 180, 200, 220, 240]
+    a = flyingNote(60+t1*280+delta[t2], 590)
+    all_flying_notes.append(a)
+    
 
 def ReleaseNote(note):
     global key_status
@@ -64,7 +131,7 @@ def DrawNoteNum():
     for i in range(35):
         key_idx = GetKeyIdx(i)
         text_surface = basicfont.render(str(key_idx+36), True, pygame.Color(color_glacierBlue))
-        screen.blit(text_surface, (50+i*40+10,  360))
+        screen.blit(text_surface, (50+i*40+10,  760))
 
     for i in range(35):
         if idx == count:
@@ -74,7 +141,7 @@ def DrawNoteNum():
         idx += 1
         key_idx = GetKeyIdx(i, isWhite=False)
         text_surface = basicfont.render(str(key_idx+36), True, pygame.Color(color_overcast))
-        screen.blit(text_surface, (50+i*40+29,  300))
+        screen.blit(text_surface, (50+i*40+29,  700))
 
 def DrawNote():
     global key_status
@@ -82,8 +149,8 @@ def DrawNote():
     idx = 0
     for i in range(35):
         if not key_status[GetKeyIdx(i)]:
-            pygame.draw.rect(screen, pygame.Color(color_glacierBlue), [50+i*40, 200, 38, 200])
-        pygame.draw.rect(screen, pygame.Color(color_warmGray), [52+i*40, 202, 32, 194])
+            pygame.draw.rect(screen, pygame.Color(color_glacierBlue), [50+i*40, 600, 38, 200])
+        pygame.draw.rect(screen, pygame.Color(color_warmGray), [52+i*40, 602, 32, 194])
         
 
     for i in range(35):
@@ -93,8 +160,8 @@ def DrawNote():
             continue
         idx += 1
         if not key_status[GetKeyIdx(i, isWhite=False)]:
-            pygame.draw.rect(screen, pygame.Color(color_glacierBlue), [50+i*40+25, 200, 30, 125])
-        pygame.draw.rect(screen, BLACK, [50+i*40+22, 200, 28, 120])
+            pygame.draw.rect(screen, pygame.Color(color_glacierBlue), [50+i*40+25, 600, 30, 125])
+        pygame.draw.rect(screen, BLACK, [50+i*40+22, 600, 28, 120])
 
 def DrawInfo():
     # basicfont = pygame.font.SysFont(None, 60)
@@ -166,11 +233,11 @@ color_ice = "#A1D6E6"
 color_glacierBlue = "#1995AD"
  
 # Set the height and width of the screen
-size = [1500, 500]
+size = [1500, 840]
 screen = pygame.display.set_mode(size)
 # DISPLAYSURF = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
  
-pygame.display.set_caption("Cyan")
+pygame.display.set_caption("Cyan (version 1.0)")
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 fontDir = os.path.join(dir_path, os.path.join("fonts", "JosefinSlab-Bold.ttf"))
@@ -201,7 +268,8 @@ while not done:
     # inside the main while done==False loop.
      
     # Clear the screen and set the screen background
-    screen.fill(pygame.Color(color_overcast))
+    # screen.fill(pygame.Color(color_overcast))
+    fill_gradient(screen, pygame.Color(color_ice), pygame.Color(color_overcast))
 
     DrawNote()
 
@@ -209,6 +277,18 @@ while not done:
 
     DrawInfo()
     
+    for a in all_flying_notes:
+        a.update(screen)
+        if a.y < -20:
+            # del a
+            all_flying_notes.remove(a)
+    # try:
+    #     a.update(screen)
+    #     if a.y < 10:
+    #         del a
+    # except NameError:
+    #     pass
+        
     # Go ahead and update the screen with what we've drawn.
     # This MUST happen after all the other drawing commands.
     pygame.display.flip()
