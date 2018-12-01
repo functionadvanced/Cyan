@@ -16,9 +16,9 @@ Some midi files are downloaded from the Internet. If there is any copyright infr
 Peizhong Ju (github account: functionadvanced), Ziyu Gong (github account: BillyGong)
 
 ## Neural Network Structures
-1. Bidirectional LSTM layer for each melody segments. <img src="https://latex.codecogs.com/gif.latex?\overrightarrow{h_T}" title="\overrightarrow{h_T}" /> and <img src="https://latex.codecogs.com/gif.latex?\overleftarrow{h_T}" title="\overleftarrow{h_T}" />, then the two vectors are concatenated to from the vector <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" />.
+1. Two bidirectional LSTM layer for each melody segments. <img src="https://latex.codecogs.com/gif.latex?\overrightarrow{h_T}" title="\overrightarrow{h_T}" /> and <img src="https://latex.codecogs.com/gif.latex?\overleftarrow{h_T}" title="\overleftarrow{h_T}" />, then the two vectors are concatenated to from the vector <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" />.
 2. The resulting <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" /> vectors are then feed into a VAE model which represets the <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" /> vector in latent space and then generate a new sample <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" /> vector.
-3. The final layer is a single layer of LSTM that took the newly generated <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" /> vector and generates the melogy.
+3. The final layer is a single layer of unidirectional LSTM that took the newly generated <img src="https://latex.codecogs.com/gif.latex?h_T" title="h_T" /> vector and generates the melogy.
 
 ### LSTM models (GRU units)
 1. Input are short melody segments that corresponds to a simple chord (C#, B, etc.)
