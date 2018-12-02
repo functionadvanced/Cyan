@@ -4,7 +4,6 @@ import MidiPoint
 import os
 
 
-
 class LSTMpredictor(torch.nn.Module):
     def __init__(self, hidden_dim):
         super(LSTMpredictor, self).__init__()
@@ -34,28 +33,36 @@ class LSTMpredictor(torch.nn.Module):
             self.min_loss = savedModel['MSEloss'] * savedModel['total_len'] / TOTAL_LEN
             self.min_note = savedModel['min_note']
 
-    def predictFromOne(self, LEN, seed, start_note, start_time, start_hid1, start_hid2, min_time):
-        torch.manual_seed(seed)
+    def predictFromMultiple(self, LEN, start_notes, min_time):
+        '''
+        start_notes should be a n*2 array
+        '''
         all_re = []
-        re = torch.tensor([[start_note, start_time]])
         self.loadModel()
-        # self.hidden = myLstm.init_hidden()
-        self.hidden = (torch.rand(1, 1, self.hidden_dim) *start_hid1,
-                        torch.rand(1, 1, self.hidden_dim) * start_hid2)
+        self.hidden = self.init_hidden()
+        base_note = start_notes[0][0]
+        start_notes = torch.tensor(start_notes)
+        
+        for jj in range(len(start_notes)-1):
+            ii = len(start_notes) - jj -1
+            start_notes[ii, 0] -= start_notes[ii-1, 0]
+        start_notes[0, 0] = 0
+        
         with torch.no_grad():
+            for ii in range(len(start_notes)):
+                re = self.forward(start_notes[ii, :].view(1,1,2))
             for ii in range(LEN):                                
                 re = self.forward(re)
                 s_re = re.view(2).tolist()
+                s_re[0] = round(s_re[0])
                 s_re[1] = round(s_re[1]/min_time, 0) * min_time
                 if s_re[1] <= 0:
                     s_re[1] = min_time
                 all_re.append(s_re)
                 re = torch.tensor([s_re])
-        all_re = torch.tensor(all_re)
-        all_re = recover(all_re)
-
-        print(all_re)
-        PlayResult(all_re)
+        all_re = torch.tensor(all_re)   
+        all_re = recover(all_re, base_note)
+        return all_re
 
     def train(self, train_dataset):                
         loss_func = torch.nn.MSELoss(reduction="sum")
@@ -72,10 +79,10 @@ class LSTMpredictor(torch.nn.Module):
             sum_loss = 0
             for songIdx in range(train_dataset.numSong):
                 self.zero_grad()
-                self.hidden = myLstm.init_hidden()
+                self.hidden = self.init_hidden()
                 data = torch.tensor(train_dataset.allResults[songIdx])
                 target = torch.tensor(train_dataset.allLabels[songIdx])
-                predict = myLstm(data)
+                predict = self.forward(data)
                 loss = loss_func(predict, target)
                 sum_loss += loss
                 loss.backward(retain_graph=True)
@@ -184,21 +191,21 @@ class DataSet(torch.utils.data.Dataset):
 
 def PlayResult(re):
     pl = []
+    # UI.AutoPlay(re)
+    return
     for i in re:
         if i[1] < 0:
             i[1] = 0
         pl.append(MidiPoint.Point(int(torch.round(i[0])), 100, 0, 0, i[1]))
     MidiPoint.PlayList(pl)
 
-def recover(aim): # aim should be a n*2 tensor
-    current_note = 63
+def recover(aim, current_note): # aim should be a n*2 tensor
     for j in range(len(aim)):
         aim[j, 0] += current_note
         current_note = aim[j, 0]
     aim[:, 1] /= 3
     return aim
 
-train_dataset = DataSet(2,numSong=18,isTrain=True)
-myLstm = LSTMpredictor(64)
-# myLstm.train(train_dataset)
-myLstm.predictFromOne(seed=2,LEN=100,start_note=0,start_time=0.1,start_hid1=0.1,start_hid2=0.1,min_time=0.5)
+# train_dataset = DataSet(2,numSong=18,isTrain=True)
+# myLstm = LSTMpredictor(64)
+# # myLstm.train(train_dataset)

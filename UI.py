@@ -4,6 +4,7 @@ import mido
 import sys
 import os
 import time
+from LSTM_delta import LSTMpredictor
 
 def fill_gradient(surface, color, gradient, rect=None, vertical=True, forward=True):
     """fill a surface with a gradient pattern
@@ -46,18 +47,40 @@ def fill_gradient(surface, color, gradient, rect=None, vertical=True, forward=Tr
             )
             fn_line(surface, color, (col,y1), (col,y2))
 
+auto_play_list = []
+current_idx = 0
+time_slot_count = 0
+def AutoPlay(_list):
+    global auto_play_list
+    auto_play_list = _list
+    print(auto_play_list)
+
+is_auto_started = False
+start_threshold = 1.1 # if no key is pressed within 1.1 seconds, start autoplay
+record_input = []
+def Predict():
+    # AutoPlay(LSTMpredictor(64).predictFromOne(seed=43,LEN=20,start_note=0,start_time=0.1,start_hid1=0.1,start_hid2=0.1,min_time=0.5))
+    print(record_input)
+    AutoPlay(LSTMpredictor(64).predictFromMultiple(20, record_input, 0.5))
+
+
 all_flying_notes = []
 class flyingNote:
-    def __init__(self, x, y):
+    def __init__(self, x, y, isAuto=False):
         self.x = x
         self.y = y
         self.v = 2
         self.dx = 20
         self.dy = 20
+        self.isAuto = isAuto
     def update(self, surface):
         self.y -= self.v
-        pygame.draw.ellipse(surface, pygame.Color(color_glacierBlue)
-            , [self.x, self.y, self.dx, self.dy], 1) 
+        if self.isAuto:
+            pygame.draw.rect(surface, pygame.Color(color_glacierBlue)
+                , [self.x, self.y, self.dx, self.dy]) 
+        else:
+            pygame.draw.rect(surface, pygame.Color(color_glacierBlue)
+                , [self.x, self.y, self.dx, self.dy], 4) 
     def __del__(self):
         pass
         # print("del")
@@ -92,24 +115,30 @@ def LoadAllNotes():
         
 a = flyingNote(100, 100)
 current_channel = 0
-def PlayNote(note):
+last_time_slot_count = 0
+def PlayNote(note, isAuto=False):
     global current_channel
     global key_statusa
+    global last_time_slot_count
+    global is_auto_started
     key_status[note-36] = True
     pygame.mixer.Channel(current_channel).play(notes_list[note-36])
     current_channel += 1
     if current_channel > 7:
         current_channel -= 8
     # generate flying note
-
     aim = note-36
     t1 = int(aim / 12)
     t2 = aim % 12
     delta = [0, 20, 40, 60, 80, 120, 140, 160, 180, 200, 220, 240]
-    a = flyingNote(60+t1*280+delta[t2], 590)
+    a = flyingNote(60+t1*280+delta[t2], 590, isAuto)
     all_flying_notes.append(a)
-    
 
+    if not isAuto:
+        if not is_auto_started:
+            record_input.append([note, (time_slot_count-last_time_slot_count) / 50])
+            last_time_slot_count = time_slot_count
+    
 def ReleaseNote(note):
     global key_status
     key_status[note-36] = False
@@ -161,7 +190,7 @@ def DrawNote():
         idx += 1
         if not key_status[GetKeyIdx(i, isWhite=False)]:
             pygame.draw.rect(screen, pygame.Color(color_glacierBlue), [50+i*40+25, 600, 30, 125])
-        pygame.draw.rect(screen, BLACK, [50+i*40+22, 600, 28, 120])
+        pygame.draw.rect(screen, pygame.Color(color_ice), [50+i*40+22, 600, 28, 120])
 
 def DrawInfo():
     # basicfont = pygame.font.SysFont(None, 60)
@@ -214,11 +243,6 @@ def Mapping(event, func):
 pygame.mixer.init(frequency = 44100, size = -16, channels = 100, buffer = 2**12) 
 pygame.init()
 LoadAllNotes()
-
-# note_list = [36, 37, 38, 39, 40, 41, 42, 43, 44, 45]
-# for note in note_list:
-#     time.sleep(0.3)
-#     PlayNote(note)
  
 # Define the colors we will use in RGB format
 BLACK = (  0,   0,   0)
@@ -231,6 +255,22 @@ color_overcast = "#F1F1F2"
 color_warmGray = "#BCBABE"
 color_ice = "#A1D6E6"
 color_glacierBlue = "#1995AD"
+
+# color_pineapple = "#FCE53D"
+# color_sun = "#FFA614"
+# color_valencia = "#CA4026"
+# color_claret = "#7E1331"
+
+# colors = ['#91D4C2', '#45BB89', '#3D82AB', '#003853']
+# colors = ['#E5EDF8', '#E29E93', '#EDBC7A', '#0384BD']
+# colors = ['#97BAA4', '#499360', '#295651', '#232941']
+# # colors = ['#D387D8', '#A13E97', '#632A7E', '#280E3B']
+# # colors = ['#8A54A2', '#8AD5EB', '#5954A4', '#04254E']
+# color_overcast = colors[0]
+# color_warmGray = colors[1]
+# color_ice = colors[2]
+# color_glacierBlue = colors[3]
+
  
 # Set the height and width of the screen
 size = [1500, 840]
@@ -250,48 +290,80 @@ clock = pygame.time.Clock()
 key_status = []
 for i in range(60):
     key_status.append(False)
-while not done:
- 
-    # This limits the while loop to a max of 10 times per second.
-    # Leave this out and we will use all CPU we can.
-    clock.tick(50)
-     
-    for event in pygame.event.get(): # User did something        
-        if event.type == pygame.QUIT: # If user clicked close
-            done=True # Flag that we are done so we exit this loop
-        if event.type == pygame.KEYDOWN:
-            Mapping(event, PlayNote)
-        if event.type == pygame.KEYUP:
-            Mapping(event, ReleaseNote)
- 
-    # All drawing code happens after the for loop and but
-    # inside the main while done==False loop.
-     
-    # Clear the screen and set the screen background
-    # screen.fill(pygame.Color(color_overcast))
-    fill_gradient(screen, pygame.Color(color_ice), pygame.Color(color_overcast))
 
-    DrawNote()
+def MainLoop():
+    global done
+    global time_slot_count
+    global last_time_slot_count
+    global current_idx
+    global auto_play_list
+    global is_auto_started
+    global record_input
+    while not done:
 
-    DrawNoteNum()
+        # This limits the while loop to a max of 10 times per second.
+        # Leave this out and we will use all CPU we can.
+        clock.tick(50)
 
-    DrawInfo()
-    
-    for a in all_flying_notes:
-        a.update(screen)
-        if a.y < -20:
-            # del a
-            all_flying_notes.remove(a)
-    # try:
-    #     a.update(screen)
-    #     if a.y < 10:
-    #         del a
-    # except NameError:
-    #     pass
+        if not is_auto_started:
+            if len(record_input) > 0:
+                if (time_slot_count - last_time_slot_count) / 50 > start_threshold:
+                    print('h')
+                    is_auto_started = True
+                    Predict()
+
+        # Auto Play
+        time_slot_count += 1
+        while True:
+            if current_idx < len(auto_play_list):
+                if time_slot_count >= auto_play_list[current_idx][1] * 50:
+                    PlayNote(int(auto_play_list[current_idx][0]), isAuto=True)
+                    current_idx += 1
+                    time_slot_count = 0
+                else:
+                    break
+            else:
+                if current_idx > 0:
+                    auto_play_list = []
+                    current_idx = 0
+                    time_slot_count = 0
+                    is_auto_started = False
+                    record_input = []
+                break
+
+
+        for event in pygame.event.get(): # User did something        
+            if event.type == pygame.QUIT: # If user clicked close
+                done=True # Flag that we are done so we exit this loop
+            if event.type == pygame.KEYDOWN:
+                Mapping(event, PlayNote)
+            if event.type == pygame.KEYUP:
+                Mapping(event, ReleaseNote)
+
+        # All drawing code happens after the for loop and but
+        # inside the main while done==False loop.
         
-    # Go ahead and update the screen with what we've drawn.
-    # This MUST happen after all the other drawing commands.
-    pygame.display.flip()
- 
-# Be IDLE friendly
-pygame.quit()
+        # Clear the screen and set the screen background
+        # screen.fill(pygame.Color(color_overcast))
+        fill_gradient(screen, pygame.Color(color_ice), pygame.Color(color_overcast))
+
+        DrawNote()
+
+        DrawNoteNum()
+
+        DrawInfo()
+        
+        for a in all_flying_notes:
+            a.update(screen)
+            if a.y < -20:
+                all_flying_notes.remove(a)
+            
+        # Go ahead and update the screen with what we've drawn.
+        # This MUST happen after all the other drawing commands.
+        pygame.display.flip()
+
+    # Be IDLE friendly
+    pygame.quit()
+
+
+MainLoop()
