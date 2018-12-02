@@ -25,13 +25,12 @@ class LSTMpredictor(torch.nn.Module):
 
     def loadModel(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        savedModel_name = "LSTM_delta.model"
+        savedModel_name = "LSTM_delta_DT.model"
         model_path = os.path.join(dir_path, savedModel_name)
         if os.path.isfile(model_path):
             savedModel = torch.load(model_path)
             self.load_state_dict(savedModel['state_dict'])
-            self.min_loss = savedModel['MSEloss'] * savedModel['total_len'] / TOTAL_LEN
-            self.min_note = savedModel['min_note']
+            self.min_loss = savedModel['MSEloss']
 
     def predictFromMultiple(self, LEN, start_notes, min_time):
         '''
@@ -55,101 +54,99 @@ class LSTMpredictor(torch.nn.Module):
                 re = self.forward(re)
                 s_re = re.view(2).tolist()
                 s_re[0] = round(s_re[0])
-                s_re[1] = round(s_re[1]/min_time, 0) * min_time
+                s_re[1] = round(s_re[1])
                 if s_re[1] <= 0:
                     s_re[1] = min_time
                 all_re.append(s_re)
-                re = torch.tensor([s_re])
+                re = torch.tensor([s_re], dtype=torch.float)
         all_re = torch.tensor(all_re)   
         all_re = recover(all_re, base_note)
         return all_re
 
     def train(self, train_dataset):                
         loss_func = torch.nn.MSELoss(reduction="sum")
-        optimizer = torch.optim.SGD(myLstm.parameters(), lr=0.002)
+        optimizer = torch.optim.SGD(myLstm.parameters(), lr=0.001)
 
-        self.min_loss = 1000000
+
         self.loadModel()
 
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        savedModel_name = "LSTM_delta.model"
+        savedModel_name = "LSTM_delta_DT.model"
         model_path = os.path.join(dir_path, savedModel_name)
+
+        test_song_num = int(train_dataset.numSong * 0.2)
 
         for epoch in range(50000):
             sum_loss = 0
-            for songIdx in range(train_dataset.numSong):
+            for songIdx in range(train_dataset.numSong - test_song_num):
                 self.zero_grad()
                 self.hidden = self.init_hidden()
-                data = torch.tensor(train_dataset.allResults[songIdx])
-                target = torch.tensor(train_dataset.allLabels[songIdx])
+                data = torch.tensor(train_dataset.allResults[songIdx], dtype=torch.float)
+                target = torch.tensor(train_dataset.allLabels[songIdx], dtype=torch.float)
                 predict = self.forward(data)
                 loss = loss_func(predict, target)
                 sum_loss += loss
                 loss.backward(retain_graph=True)
                 optimizer.step()
-            avg_loss = sum_loss / train_dataset.numSong
-            print(avg_loss)
-            # save
-            # if avg_loss < self.min_loss and avg_loss < 100:
-            if avg_loss < 40:
-                torch.save(
-                            {
-                                'MSEloss': avg_loss / TOTAL_LEN,
-                                'state_dict': self.state_dict(),
-                                'total_len': TOTAL_LEN,
-                                'min_note': train_dataset.min_note,
-                            }, model_path
-                        )
-                self.min_loss = avg_loss
-                print('save model')
-                break
-
-
+            with torch.no_grad():
+                train_loss = sum_loss / (train_dataset.numSong - test_song_num) / TOTAL_LEN
+                for ii in range(test_song_num):
+                    self.hidden = self.init_hidden()
+                    songIdx = train_dataset.numSong - test_song_num - 1 + ii
+                    data = torch.tensor(train_dataset.allResults[songIdx], dtype=torch.float)
+                    target = torch.tensor(train_dataset.allLabels[songIdx], dtype=torch.float)
+                    predict = self.forward(data)
+                    loss = loss_func(predict, target)
+                    sum_loss += loss
+                test_loss  = sum_loss / test_song_num / TOTAL_LEN
+                print("train loss: {:.1f}, test loss: {:.1f}".format(train_loss, test_loss))
+                # save
+                if test_loss < 15.5:
+                    torch.save(
+                                {
+                                    'MSEloss': test_loss,
+                                    'state_dict': self.state_dict(),
+                                }, model_path
+                            )
+                    print('save model')
+                    break
 
         with torch.no_grad():
             self.hidden = self.init_hidden()
-            data = torch.tensor(train_dataset.allResults[0])
-            # target = torch.tensor(train_dataset.allLabels[0])
-            re = train_dataset.recover(self.forward(data))
-            # print(target)
-            # re = train_dataset.recover(target)
+            data = torch.tensor(train_dataset.allResults[16], dtype=torch.float)
+            re = recover(self.forward(data), 70)
             print(re)            
             PlayResult(re)
 
 
-TOTAL_LEN = 80
+TOTAL_LEN = 150
 
 class DataSet(torch.utils.data.Dataset):
     def normalize(self):
-        # find the min note & max delta_time, then normalize
-        self.min_note = 1000
-        self.max_note = 0
-        self.max_delta_time = 0
-        for j in range(self.numSong):
-            for i in range(len(self.allLists[j])):
-                if self.allLists[j][i].note < self.min_note:
-                    self.min_note = self.allLists[j][i].note
-                if self.allLists[j][i].note > self.max_note:
-                    self.max_note = self.allLists[j][i].note
-                if self.allLists[j][i].delta_time > self.max_delta_time:
-                    self.max_delta_time = self.allLists[j][i].delta_time
         for j in range(self.numSong):
             current_note = self.allLists[j][0].note
-            self.allLists[j][0].note = 0
-            self.allLists[j][0].delta_time *= 3            
+            self.allLists[j][0].note = 0          
             for i in range(len(self.allLists[j])-1):
                 temp = self.allLists[j][i+1].note
                 self.allLists[j][i+1].note -= current_note
                 current_note = temp
-                self.allLists[j][i+1].delta_time *= 3
+        
+        # quantize delta time
+        for j in range(self.numSong):
+            min_interval = 100
+            for ii in range(len(self.allLists[j])):
+                tt = self.allLists[j][ii].delta_time
+                if tt > 0.15 and tt < min_interval:        
+                    min_interval = tt
+            # print(min_interval)
+            for ii in range(len(self.allLists[j])):
+                tt = self.allLists[j][ii].delta_time
+                if tt <= 0.15:
+                    self.allLists[j][ii].delta_time = 0
+                else:
+                    self.allLists[j][ii].delta_time = round(tt / min_interval)
     
-    def recover(self, aim): # aim should be a n*2 tensor
-        current_note = 70
-        for j in range(len(aim)):
-            aim[j, 0] += current_note
-            current_note = aim[j, 0]
-        aim[:, 1] /= 3
-        return aim
+
 
     def __init__(self, mode, numSong=1, isTrain=False):
         self.isTrain = isTrain
@@ -163,7 +160,7 @@ class DataSet(torch.utils.data.Dataset):
                 pointList = MidiPoint.PointList(idx+'-l.mid', idx+'-r.mid').list
             elif mode == 1: # left hand
                 pointList = MidiPoint.PointList(idx+'-l.mid').list
-            else:
+            else: # right hand
                 pointList = MidiPoint.PointList(idx+'-r.mid').list
             
             
@@ -192,20 +189,22 @@ class DataSet(torch.utils.data.Dataset):
 def PlayResult(re):
     pl = []
     # UI.AutoPlay(re)
-    return
+    # return
     for i in re:
         if i[1] < 0:
             i[1] = 0
-        pl.append(MidiPoint.Point(int(torch.round(i[0])), 100, 0, 0, i[1]))
+        # print(i[1].double() / 50.0)
+        pl.append(MidiPoint.Point(int(i[0]), 100, 0, 0, i[1].double()))
     MidiPoint.PlayList(pl)
 
 def recover(aim, current_note): # aim should be a n*2 tensor
     for j in range(len(aim)):
         aim[j, 0] += current_note
+        aim[j, 1] *= 0.5
         current_note = aim[j, 0]
-    aim[:, 1] /= 3
     return aim
 
 # train_dataset = DataSet(2,numSong=18,isTrain=True)
-# myLstm = LSTMpredictor(64)
-# # myLstm.train(train_dataset)
+# # # PlayResult(recover(torch.tensor(train_dataset.allResults[0]), 70))
+# myLstm = LSTMpredictor(128)
+# myLstm.train(train_dataset)

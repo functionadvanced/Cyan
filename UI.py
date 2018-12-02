@@ -63,7 +63,7 @@ record_input = []
 def Predict():
     # AutoPlay(LSTMpredictor(64).predictFromOne(seed=43,LEN=20,start_note=0,start_time=0.1,start_hid1=0.1,start_hid2=0.1,min_time=0.5))
     print(record_input)
-    AutoPlay(LSTMpredictor(64).predictFromMultiple(20, record_input, 0.5))
+    AutoPlay(LSTMpredictor(128).predictFromMultiple(20, record_input, 0.5))
 
 all_flying_notes = []
 class flyingNote:
