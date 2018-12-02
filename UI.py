@@ -1,9 +1,9 @@
-# Import a library of functions called 'pygame'
 import pygame
 import mido
 import sys
 import os
 import time
+import colors
 from LSTM_delta import LSTMpredictor
 
 def fill_gradient(surface, color, gradient, rect=None, vertical=True, forward=True):
@@ -50,6 +50,8 @@ def fill_gradient(surface, color, gradient, rect=None, vertical=True, forward=Tr
 auto_play_list = []
 current_idx = 0
 time_slot_count = 0
+release_time_count = 0
+release_idx = 0
 def AutoPlay(_list):
     global auto_play_list
     auto_play_list = _list
@@ -62,7 +64,6 @@ def Predict():
     # AutoPlay(LSTMpredictor(64).predictFromOne(seed=43,LEN=20,start_note=0,start_time=0.1,start_hid1=0.1,start_hid2=0.1,min_time=0.5))
     print(record_input)
     AutoPlay(LSTMpredictor(64).predictFromMultiple(20, record_input, 0.5))
-
 
 all_flying_notes = []
 class flyingNote:
@@ -84,7 +85,6 @@ class flyingNote:
     def __del__(self):
         pass
         # print("del")
-
 
 def CreateEachNote(note):
     # construct new midi
@@ -243,35 +243,13 @@ def Mapping(event, func):
 pygame.mixer.init(frequency = 44100, size = -16, channels = 100, buffer = 2**12) 
 pygame.init()
 LoadAllNotes()
- 
-# Define the colors we will use in RGB format
-BLACK = (  0,   0,   0)
-WHITE = (255, 255, 255)
-BLUE =  (  0,   0, 255)
-GREEN = (  0, 255,   0)
-RED =   (255,   0,   0)
 
-color_overcast = "#F1F1F2"
-color_warmGray = "#BCBABE"
-color_ice = "#A1D6E6"
-color_glacierBlue = "#1995AD"
+colors = colors.PickColorTheme(0)
+color_overcast = colors[0]
+color_warmGray = colors[1]
+color_ice = colors[2]
+color_glacierBlue = colors[3]
 
-# color_pineapple = "#FCE53D"
-# color_sun = "#FFA614"
-# color_valencia = "#CA4026"
-# color_claret = "#7E1331"
-
-# colors = ['#91D4C2', '#45BB89', '#3D82AB', '#003853']
-# colors = ['#E5EDF8', '#E29E93', '#EDBC7A', '#0384BD']
-# colors = ['#97BAA4', '#499360', '#295651', '#232941']
-# # colors = ['#D387D8', '#A13E97', '#632A7E', '#280E3B']
-# # colors = ['#8A54A2', '#8AD5EB', '#5954A4', '#04254E']
-# color_overcast = colors[0]
-# color_warmGray = colors[1]
-# color_ice = colors[2]
-# color_glacierBlue = colors[3]
-
- 
 # Set the height and width of the screen
 size = [1500, 840]
 screen = pygame.display.set_mode(size)
@@ -299,9 +277,11 @@ def MainLoop():
     global auto_play_list
     global is_auto_started
     global record_input
+    global release_idx
+    global release_time_count
     while not done:
 
-        # This limits the while loop to a max of 10 times per second.
+        # This limits the while loop to a max of 50 times per second.
         # Leave this out and we will use all CPU we can.
         clock.tick(50)
 
@@ -323,10 +303,28 @@ def MainLoop():
                 else:
                     break
             else:
+                break
+
+        # Auto release
+        release_time_count += 1
+        while True:
+            if release_idx < len(auto_play_list):
+                # print('here')
+                if release_time_count >= auto_play_list[release_idx][1] * 50 + 2:
+                    ReleaseNote(int(auto_play_list[release_idx][0]))
+                    release_idx += 1
+                    release_time_count = 0
+                    
+                else:
+                    break
+            else:
                 if current_idx > 0:
+                    # restart
                     auto_play_list = []
                     current_idx = 0
                     time_slot_count = 0
+                    release_idx = 0
+                    release_time_count = 0
                     is_auto_started = False
                     record_input = []
                 break
@@ -364,6 +362,5 @@ def MainLoop():
 
     # Be IDLE friendly
     pygame.quit()
-
 
 MainLoop()
