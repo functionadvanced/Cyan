@@ -39,6 +39,7 @@ class LSTMpredictor(torch.nn.Module):
         all_re = []
         self.loadModel()
         self.hidden = self.init_hidden()
+
         base_note = start_notes[0][0]
         start_notes = torch.tensor(start_notes)
         
@@ -46,10 +47,22 @@ class LSTMpredictor(torch.nn.Module):
             ii = len(start_notes) - jj -1
             start_notes[ii, 0] -= start_notes[ii-1, 0]
         start_notes[0, 0] = 0
+
+        min_time_interval = 100
+        for jj in range(len(start_notes)):
+            if start_notes[ii, 1] > 0.2 and start_notes[ii, 1] < min_time_interval:
+                min_time_interval = start_notes[ii, 1]
+        
+        for jj in range(len(start_notes)):
+            if start_notes[ii, 1] <= 0.3:
+                start_notes[ii, 1] = 0
+            else:
+                start_notes[ii, 1] /= min_time_interval
         
         with torch.no_grad():
-            for ii in range(len(start_notes)):
-                re = self.forward(start_notes[ii, :].view(1,1,2))
+            for jj in range(100): # repeat the input 4 times
+                for ii in range(len(start_notes)):
+                    re = self.forward(start_notes[ii, :].view(1,1,2))
             for ii in range(LEN):                                
                 re = self.forward(re)
                 s_re = re.view(2).tolist()
@@ -200,11 +213,11 @@ def PlayResult(re):
 def recover(aim, current_note): # aim should be a n*2 tensor
     for j in range(len(aim)):
         aim[j, 0] += current_note
-        aim[j, 1] *= 0.5
+        aim[j, 1] *= 0.3
         current_note = aim[j, 0]
     return aim
 
 # train_dataset = DataSet(2,numSong=18,isTrain=True)
-# # # PlayResult(recover(torch.tensor(train_dataset.allResults[0]), 70))
+# # PlayResult(recover(torch.tensor(train_dataset.allResults[0]), 70))
 # myLstm = LSTMpredictor(128)
 # myLstm.train(train_dataset)

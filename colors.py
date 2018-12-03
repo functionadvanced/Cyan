@@ -6,4 +6,6 @@ def PickColorTheme(idx):
                 ['#97BAA4', '#499360', '#295651', '#232941'],
                 ['#D387D8', '#A13E97', '#632A7E', '#280E3B'],
                 ['#8A54A2', '#8AD5EB', '#5954A4', '#04254E'],    ]
+
+    idx %= len(colors)
     return colors[idx]

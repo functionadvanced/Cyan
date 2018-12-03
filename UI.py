@@ -58,7 +58,7 @@ def AutoPlay(_list):
     print(auto_play_list)
 
 is_auto_started = False
-start_threshold = 1.1 # if no key is pressed within 1.1 seconds, start autoplay
+start_threshold = 2.0 # if no key is pressed within 1.1 seconds, start autoplay
 record_input = []
 def Predict():
     # AutoPlay(LSTMpredictor(64).predictFromOne(seed=43,LEN=20,start_note=0,start_time=0.1,start_hid1=0.1,start_hid2=0.1,min_time=0.5))
@@ -208,6 +208,9 @@ def DrawInfo():
     screen.blit(text_surface, (20,  120))
 
 def Mapping(event, func):
+    if event.key == pygame.K_0:
+        # change color theme
+        ChangeColorTheme()
     if event.key == pygame.K_a:
         func(60)
     if event.key == pygame.K_w:
@@ -244,11 +247,22 @@ pygame.mixer.init(frequency = 44100, size = -16, channels = 100, buffer = 2**12)
 pygame.init()
 LoadAllNotes()
 
-colors = colors.PickColorTheme(0)
-color_overcast = colors[0]
-color_warmGray = colors[1]
-color_ice = colors[2]
-color_glacierBlue = colors[3]
+
+Colors = colors.PickColorTheme(0)
+color_overcast = Colors[0]
+color_warmGray = Colors[1]
+color_ice = Colors[2]
+color_glacierBlue = Colors[3]
+colorTheme_idx = 0
+def ChangeColorTheme():
+    global colorTheme_idx
+    global color_glacierBlue, color_ice, color_overcast, color_warmGray
+    colorTheme_idx += 1
+    Colors = colors.PickColorTheme(colorTheme_idx)
+    color_overcast = Colors[0]
+    color_warmGray = Colors[1]
+    color_ice = Colors[2]
+    color_glacierBlue = Colors[3]
 
 # Set the height and width of the screen
 size = [1500, 840]
